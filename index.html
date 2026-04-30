@@ -1237,6 +1237,28 @@
     </div>
   </div>
 
+  <!-- Fallback-Vokabeln für lokale file:// Tests. Im Hosting wird vocab.csv per fetch nachgeladen und überschreibt diesen Block. -->
+  <script type="text/plain" id="vocab-csv">
+fr;de;thema
+onze;elf;Zahlen 11-20
+douze;zwölf;Zahlen 11-20
+treize;dreizehn;Zahlen 11-20
+quatorze;vierzehn;Zahlen 11-20
+quinze;fünfzehn;Zahlen 11-20
+seize;sechzehn;Zahlen 11-20
+dix-sept;siebzehn;Zahlen 11-20
+dix-huit;achtzehn;Zahlen 11-20
+dix-neuf;neunzehn;Zahlen 11-20
+vingt;zwanzig;Zahlen 11-20
+vingt-et-un;einundzwanzig;Zahlen erweitert
+soixante-six;sechsundsechzig;Zahlen erweitert
+soixante-dix;siebzig;Zahlen erweitert
+quatre-vingts;achtzig;Zahlen erweitert
+quatre-vingt-dix-neuf;neunundneunzig;Zahlen erweitert
+cent;hundert;Zahlen erweitert
+calculer;rechnen;Verben
+  </script>
+
   <script>
   /* ============================================================
      PENGT — Vanilla JS, single file PWA
@@ -1244,94 +1266,59 @@
      Leitner-System (5 Fächer, 1/2/4/8/16 Tage)
      ============================================================ */
 
-  // ---- Vocab data (Französisch → Deutsch, Starter-Set für Klasse 7/8) ----
-  const VOCAB = [
-    ["salut","hallo / tschüss"],
-    ["bonjour","guten Tag"],
-    ["bonsoir","guten Abend"],
-    ["au revoir","auf Wiedersehen"],
-    ["merci","danke"],
-    ["s'il te plaît","bitte (du)"],
-    ["s'il vous plaît","bitte (Sie)"],
-    ["oui","ja"],
-    ["non","nein"],
-    ["pardon","Entschuldigung"],
-    ["ça va ?","wie geht's?"],
-    ["très bien","sehr gut"],
-    ["comment tu t'appelles ?","wie heißt du?"],
-    ["je m'appelle …","ich heiße …"],
-    ["un ami","ein Freund"],
-    ["une amie","eine Freundin"],
-    ["la famille","die Familie"],
-    ["la mère","die Mutter"],
-    ["le père","der Vater"],
-    ["le frère","der Bruder"],
-    ["la sœur","die Schwester"],
-    ["un chat","eine Katze"],
-    ["un chien","ein Hund"],
-    ["une maison","ein Haus"],
-    ["une école","eine Schule"],
-    ["un livre","ein Buch"],
-    ["un cahier","ein Heft"],
-    ["un stylo","ein Stift"],
-    ["une voiture","ein Auto"],
-    ["une ville","eine Stadt"],
-    ["un pays","ein Land"],
-    ["un jour","ein Tag"],
-    ["une nuit","eine Nacht"],
-    ["le soleil","die Sonne"],
-    ["la lune","der Mond"],
-    ["l'eau (f.)","das Wasser"],
-    ["le pain","das Brot"],
-    ["le lait","die Milch"],
-    ["une pomme","ein Apfel"],
-    ["manger","essen"],
-    ["boire","trinken"],
-    ["dormir","schlafen"],
-    ["aller","gehen / fahren"],
-    ["venir","kommen"],
-    ["voir","sehen"],
-    ["faire","machen / tun"],
-    ["être","sein"],
-    ["avoir","haben"],
-    ["parler","sprechen"],
-    ["écouter","zuhören"],
-    ["lire","lesen"],
-    ["écrire","schreiben"],
-    ["regarder","ansehen"],
-    ["aimer","mögen / lieben"],
-    ["jouer","spielen"],
-    ["grand","groß"],
-    ["petit","klein"],
-    ["beau","schön (m.)"],
-    ["belle","schön (f.)"],
-    ["joli","hübsch"],
-    ["bon","gut"],
-    ["mauvais","schlecht"],
-    ["heureux","glücklich"],
-    ["triste","traurig"],
-    ["facile","einfach"],
-    ["difficile","schwierig"],
-    ["aujourd'hui","heute"],
-    ["demain","morgen"],
-    ["hier","gestern"],
-    ["maintenant","jetzt"],
-    ["toujours","immer"],
-    ["jamais","nie"],
-    ["beaucoup","viel"],
-    ["un peu","ein bisschen"],
-    ["zéro","null"],
-    ["un","eins"],
-    ["deux","zwei"],
-    ["trois","drei"],
-    ["quatre","vier"],
-    ["cinq","fünf"],
-    ["six","sechs"],
-    ["sept","sieben"],
-    ["huit","acht"],
-    ["neuf","neun"],
-    ["dix","zehn"]
-  ];
+  // ---- Vocab data ---------------------------------------------------------
+  // Quelle der Wahrheit: vocab.csv im selben Ordner.
+  //   Spalten:  fr ; de ; thema    (Semikolon, Komma oder Tab gehen alle)
+  //   Header-Zeile (fr;de;...) wird automatisch übersprungen.
+  //   Zeilen, die mit # beginnen, sind Kommentare.
+  //
+  // Damit die App auch beim lokalen Doppelklick (file://) läuft, gibt es
+  // unten im <body> einen <script type="text/plain" id="vocab-csv">-Block
+  // mit derselben CSV als Fallback. Im Hosting (GitHub Pages) wird vocab.csv
+  // per fetch nachgeladen und überschreibt den Fallback.
+  // -------------------------------------------------------------------------
+  let VOCAB = [];
+
+  function parseVocabCSV(text) {
+    const lines = text.replace(/\r/g, "").split("\n");
+    const out = [];
+    let headerSeen = false;
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#")) continue;
+      const sep = line.includes(";") ? ";" : (line.includes("\t") ? "\t" : ",");
+      if (!headerSeen) {
+        headerSeen = true;
+        if (/^fr\s*[;,\t]\s*de/i.test(line)) continue;
+      }
+      const parts = line.split(sep).map(s => s.trim());
+      if (parts.length < 2) continue;
+      const fr = parts[0], de = parts[1];
+      if (fr && de) out.push([fr, de]);
+    }
+    return out;
+  }
+
+  // 1. Sofort aus dem inline Fallback laden (funktioniert auf file://)
+  (function loadInline() {
+    const el = document.getElementById("vocab-csv");
+    if (el && el.textContent) VOCAB = parseVocabCSV(el.textContent);
+  })();
+
+  // 2. Versuchen, die externe vocab.csv zu holen (überschreibt inline, wenn erreichbar)
+  function loadVocab() {
+    return fetch("vocab.csv", { cache: "no-cache" })
+      .then(r => r.ok ? r.text() : Promise.reject(r.status))
+      .then(txt => {
+        const parsed = parseVocabCSV(txt);
+        if (parsed.length) {
+          VOCAB = parsed;
+          if (typeof renderHome === "function") renderHome();
+        }
+      })
+      .catch(() => { /* file:// oder kein Netz — inline reicht */ });
+  }
+  loadVocab();
 
   // ---- Constants ----
   const LEVELS = [
