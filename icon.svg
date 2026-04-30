@@ -1,0 +1,26 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#B026FF"/>
+      <stop offset="50%"  stop-color="#FF26B0"/>
+      <stop offset="100%" stop-color="#00F0FF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="60%"  stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="96" fill="url(#glow)"/>
+  <text x="256" y="362"
+        text-anchor="middle"
+        font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+        font-weight="800"
+        font-size="320"
+        fill="#ffffff"
+        letter-spacing="-12">P</text>
+  <circle cx="402" cy="120" r="6"  fill="#ffffff" opacity="0.85"/>
+  <circle cx="430" cy="160" r="3"  fill="#ffffff" opacity="0.7"/>
+  <circle cx="86"  cy="392" r="4"  fill="#ffffff" opacity="0.7"/>
+  <circle cx="120" cy="430" r="2.5" fill="#ffffff" opacity="0.55"/>
+</svg>
