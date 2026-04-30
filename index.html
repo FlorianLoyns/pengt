@@ -339,6 +339,41 @@
       margin-top: 2px;
     }
 
+    .practice-btn {
+      width: 100%;
+      background: transparent;
+      color: var(--primary);
+      border: 1.5px dashed var(--primary);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: -.01em;
+      text-align: center;
+      transition: background .15s, transform .1s;
+    }
+    .practice-btn:active { transform: scale(.98); }
+    .practice-btn.hot {
+      /* Tagesplan erfüllt — Üben rückt in den Vordergrund */
+      background: var(--grape-gradient);
+      color: white;
+      border-style: solid;
+      border-color: transparent;
+      box-shadow: 0 8px 22px rgba(176, 38, 255, .35);
+    }
+    .practice-btn-label {
+      display: block;
+      font-size: 15px;
+      font-weight: 800;
+    }
+    .practice-btn-sub {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      opacity: .8;
+      margin-top: 2px;
+    }
+
     .welcome-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -1062,6 +1097,11 @@
         <span class="start-btn-sub" id="start-btn-sub">— Karten in dieser Session</span>
       </button>
 
+      <button class="practice-btn" id="btn-practice">
+        <span class="practice-btn-label">Üben (für die Prüfung)</span>
+        <span class="practice-btn-sub" id="practice-btn-sub">Zufällig aus allen Vokabeln · ändert nichts an den Fächern</span>
+      </button>
+
       <div class="footer">
         <a href="https://florianloyns.github.io/Impressum/" target="_blank" rel="noopener">Impressum</a>
       </div>
@@ -1503,6 +1543,13 @@ calculer;rechnen;Verben
     return session;
   }
 
+  // Üben-Modus: zieht zufällig N Karten aus allen Vokabeln, ohne Leitner-Logik
+  function buildPracticeSession(n) {
+    const all = VOCAB.slice();
+    shuffle(all);
+    return all.slice(0, Math.min(n, all.length));
+  }
+
   function shuffle(a) {
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -1707,14 +1754,21 @@ calculer;rechnen;Verben
     const startBtn = document.getElementById("btn-start");
     const label = document.getElementById("start-btn-label");
     const sub = document.getElementById("start-btn-sub");
+    const practiceBtn = document.getElementById("btn-practice");
+    const practiceSub = document.getElementById("practice-btn-sub");
     if (sess.length === 0) {
-      label.textContent = "Heute alles erledigt 🎉";
-      sub.textContent = "Komm morgen wieder";
+      label.textContent = "Tagesplan erfüllt 🎉";
+      sub.textContent = "Morgen warten neue Karten";
       startBtn.disabled = true;
+      // Üben rückt in den Vordergrund
+      if (practiceBtn) practiceBtn.classList.add("hot");
+      if (practiceSub) practiceSub.textContent = "Weiter pauken — z. B. für die Prüfung. Ändert nichts an den Fächern.";
     } else {
       label.textContent = "Lernen starten";
       sub.textContent = sess.length + " Karten in dieser Session";
       startBtn.disabled = false;
+      if (practiceBtn) practiceBtn.classList.remove("hot");
+      if (practiceSub) practiceSub.textContent = "Zufällig aus allen Vokabeln · ändert nichts an den Fächern";
     }
 
     // Heatmap der letzten 30 Tage
@@ -1751,10 +1805,27 @@ calculer;rechnen;Verben
   let canRate = false;
 
   // ---- Rendering: REVIEW ----
+  let practiceMode = false;
+
   function startSession() {
     session = buildSession();
     if (!session.length) return;
     sessionIdx = 0;
+    practiceMode = false;
+    sessionResults = { easy: 0, mid: 0, hard: 0, xpStart: state.stats.xp || 0, levelStart: levelForXp(state.stats.xp || 0) };
+    comboCount = 0;
+    if (comboPill) comboPill.classList.remove("shown", "bump");
+    showScreen("review");
+    renderCard();
+  }
+
+  function startPractice() {
+    if (!VOCAB.length) return;
+    const limit = state.settings.dailyLimit || 20;
+    session = buildPracticeSession(limit);
+    if (!session.length) return;
+    sessionIdx = 0;
+    practiceMode = true;
     sessionResults = { easy: 0, mid: 0, hard: 0, xpStart: state.stats.xp || 0, levelStart: levelForXp(state.stats.xp || 0) };
     comboCount = 0;
     if (comboPill) comboPill.classList.remove("shown", "bump");
@@ -1920,7 +1991,16 @@ calculer;rechnen;Verben
   function handleRate(rating) {
     if (!canRate) return;
     const [term] = session[sessionIdx];
-    const result = rateCard(term, rating);
+    if (practiceMode) {
+      // Üben: keine Box-Bewegung, nur XP + Tageshistorie
+      if (rating === 2) state.stats.xp = (state.stats.xp || 0) + 1;
+      state.stats.totalReviews = (state.stats.totalReviews || 0) + 1;
+      if (!state.stats.history) state.stats.history = {};
+      const tk = todayKey();
+      state.stats.history[tk] = (state.stats.history[tk] || 0) + 1;
+    } else {
+      rateCard(term, rating);
+    }
 
     if (rating === 2) { sessionResults.easy++; sfx.easy(); showFloatingXp("+1 XP"); }
     else if (rating === 1) { sessionResults.mid++; sfx.mid(); }
@@ -2057,6 +2137,7 @@ calculer;rechnen;Verben
 
   // ---- Event wiring ----
   document.getElementById("btn-start").addEventListener("click", startSession);
+  document.getElementById("btn-practice").addEventListener("click", startPractice);
   document.getElementById("btn-quit").addEventListener("click", quitSession);
   document.getElementById("btn-home").addEventListener("click", () => { showScreen("home"); renderHome(); });
   document.getElementById("btn-continue").addEventListener("click", () => { startSession(); });
